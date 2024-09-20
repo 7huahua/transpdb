@@ -171,13 +171,13 @@ def init(folder_path,dna_seq, chain_name):
         chain_B_res_C = structure_B_C[0]['B'][1]
         chain_B_res_G = structure_B_G[0]['B'][1]
         
-        if reverse_dna_seq[0] == 'A':
+        if dna_seq[0] == 'A':
             structure = structure_B_A
-        elif reverse_dna_seq[0] == 'T':
+        elif dna_seq[0] == 'T':
             structure = structure_B_T
-        elif reverse_dna_seq[0] == 'C':
+        elif dna_seq[0] == 'C':
             structure = structure_B_C
-        elif reverse_dna_seq[0] == 'G':
+        elif dna_seq[0] == 'G':
             structure = structure_B_G
     
         new_structure = generate_chain(reverse_dna_seq, structure, 'A', rotran, chain_B_res_A, chain_B_res_T, chain_B_res_C, chain_B_res_G)
@@ -260,15 +260,16 @@ if __name__ == "__main__":
     # parse the DNA sequence from arguements
     parser = argparse.ArgumentParser()
     parser.add_argument("--dna_seq", help="DNA sequence to generate PDB file")
+    # add A or B（indicate the rotation direction)
+    parser.add_argument("--chain_type", help="select from A or B")
+    parser.add_argument("--output_path", help="output path")
 
     dna_seq = parser.parse_args().dna_seq
+    chain_type = parser.parse_args().chain_type
+    output_path = parser.parse_args().output_path
 
-
-    reverse_dna_seq = Seq(dna_seq).reverse_complement()[::-1]
-    print(reverse_dna_seq)
-
-    structure_A = init(folder_path, dna_seq, 'A')
-    structure_B = init(folder_path, reverse_dna_seq, 'B')
+    structure_A = init(folder_path, dna_seq, chain_type)
+    # structure_B = init(folder_path, reverse_dna_seq, 'B')
 
     # # generate the incremented pdb file path name
     # output_file_A = os.path.join(folder_path, "chain_A.pdb")
@@ -278,7 +279,7 @@ if __name__ == "__main__":
     #         output_file_A = os.path.join(folder_path, f"chain_A_{i}.pdb")
     #         i += 1
 
-    # write_pdb(structure_A, output_file_A)  # Replace with the output file path
+    write_pdb(structure_A, output_path)  # Replace with the output file path
 
     # output_file_B = os.path.join(folder_path, "chain_B.pdb")
     # if os.path.exists(output_file_B):
