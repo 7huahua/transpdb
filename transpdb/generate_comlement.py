@@ -5,6 +5,7 @@ import numpy as np
 from datetime import datetime
 import os
 import argparse
+from Bio.Align import PairwiseAligner
 
 
 def read_pdb(file_path):
@@ -119,7 +120,46 @@ def generate_chain(dna_seq, structure, chain_name, rotran, res_A, res_T, res_C, 
 
     return structure
 
-def init(folder_path,dna_seq, chain_name):
+def init(folder_path,dna_seq, chain_name, real_dna_seq, align_pos):
+    # get the structure of the real dna sequence
+    structure_real = get_structure(folder_path,real_dna_seq, chain_name)
+    # get the structure of the long dna sequence
+    structure_long = get_structure(folder_path,dna_seq, chain_name)
+
+    # align the structure_real to the structure_long
+    align_structure(structure_real, structure_long, align_pos)
+
+    return structure_real
+
+def align_structure(structure_real, structure_long, align_pos):
+    # use biopython to align the structure_real to the structure_long
+    # classBio.PDB.Superimposer.Superimposer
+    # Bases: object
+
+    # Rotate/translate one set of atoms on top of another to minimize RMSD.
+
+    # __init__(self)
+    # Initialize the class.
+
+    # set_atoms(self, fixed, moving)
+    # Prepare translation/rotation to minimize RMSD between atoms.
+
+    # Put (translate/rotate) the atoms in fixed on the atoms in moving, in such a way that the RMSD is minimized.
+
+    # Parameters
+    # fixed – list of (fixed) atoms
+
+    # moving – list of (moving) atoms
+
+    # apply(self, atom_list)
+    # Rotate/translate a list of atoms.
+
+
+    
+
+
+
+def get_structure(folder_path,dna_seq, chain_name):
 
     rotran = RoTran()
     # dna_seq = chain_long_sequence
@@ -259,16 +299,21 @@ if __name__ == "__main__":
 
     # parse the DNA sequence from arguements
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dna_seq", help="DNA sequence to generate PDB file")
+    parser.add_argument("--dna_seq", help="The long DNA sequence for alignment")
+    parser.add_argument("--real_dna_seq", help="Real DNA sequence to generate PDB file")
+    parser.add_argument("--align_pos", help="The position of the long DNA sequence to align")
     # add A or B（indicate the rotation direction)
     parser.add_argument("--chain_type", help="select from A or B")
     parser.add_argument("--output_path", help="output path")
+    
 
     dna_seq = parser.parse_args().dna_seq
     chain_type = parser.parse_args().chain_type
     output_path = parser.parse_args().output_path
+    real_dna_seq = parser.parse_args().real_dna_seq
+    align_pos = parser.parse_args().align_pos
 
-    structure_A = init(folder_path, dna_seq, chain_type)
+    structure_A = init(folder_path, dna_seq, chain_type, real_dna_seq, align_pos)
     # structure_B = init(folder_path, reverse_dna_seq, 'B')
 
     # # generate the incremented pdb file path name
@@ -278,9 +323,6 @@ if __name__ == "__main__":
     #     while os.path.exists(output_file_A):
     #         output_file_A = os.path.join(folder_path, f"chain_A_{i}.pdb")
     #         i += 1
-
-    # ATTATTATTATTATTATTATT
-    # TAATAATAATAATAATAATAA
 
     write_pdb(structure_A, output_path)  # Replace with the output file path
 

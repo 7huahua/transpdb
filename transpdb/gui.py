@@ -2,8 +2,9 @@ import tkinter as tk
 from tkinter import messagebox
 import subprocess
 import os
+import Bio.Align
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 def parse_dna_sequence(input_text):
     """
@@ -70,6 +71,101 @@ def run_generate_pdb_and_config():
                 continue
             result = subprocess.run(
                 ['python', 'generate_pdb.py', '--dna_seq', sequence_data['sequence'], '--chain_type', 'A', '--output_path', output_path],
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                pdb_paths.append(output_path)
+                output_text.insert(tk.END, f"PDB file {index + 1} generated successfully: {output_path}\n")
+            else:
+                output_text.insert(tk.END, f"Failed to generate PDB file {index + 1}, please check!\n")
+                output_text.insert(tk.END, result.stderr)
+                return  # Stop processing if any PDB generation fails
+        
+        except Exception as e:
+            messagebox.showerror("Error", f"Problem running generate_pdb.py: {e}")
+            return
+
+    if len(pdb_paths) == len(parsed_sequences):
+        try:
+            command = [
+                'python', 
+                'generate_config.py'
+            ] + [str(seq['spaces']) for seq in parsed_sequences] + pdb_paths + [
+                '--config_folder', 
+                config_folder
+            ]
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            if result.returncode == 0:
+                config_path = result.stdout.strip()
+                output_text.insert(tk.END, f"\nConfig file generated successfully: {config_path}\n")
+            else:
+                output_text.insert(tk.END, "Failed to generate Config file, please check!\n")
+                output_text.insert(tk.END, result.stderr)
+        
+        except Exception as e:
+            messagebox.showerror("Error", f"Problem running generate_config.py: {e}")
+    else:
+        output_text.insert(tk.END, "Config file not generated due to incomplete PDB file generation.\n")
+
+
+def run_generate_pdb_config_align():
+    if DEBUG_MODE:
+        pdb_folder = r"D:\Han\projects\transpdb\han\generated_pdb"
+        config_folder = r"D:\2024.02.22_VRSim-Gutmann\SimulationFolder\PDB_Files\Configuration_Files"
+        debug_input = "      gcta\natcgatcgatcgatcgatcgatcgatcgatcg\n                tagc"
+        
+        entry_pdb_folder.delete(0, tk.END)
+        entry_pdb_folder.insert(0, pdb_folder)
+        entry_config_folder.delete(0, tk.END)
+        entry_config_folder.insert(0, config_folder)
+        text_input.delete("1.0", tk.END)
+        text_input.insert("1.0", debug_input)
+
+    if not get_folder_paths():
+        return
+
+    user_input = text_input.get("1.0", tk.END)
+    if not user_input.strip():
+        messagebox.showwarning("Input Error", "Please enter DNA sequence")
+        return
+    
+    parsed_sequences = parse_dna_sequence(user_input)
+    pdb_paths = []
+
+    output_text.delete("1.0", tk.END)  # Clear output text box
+
+    # get the longest sequence
+    longest_sequence = max(parsed_sequences, key=lambda x: len(x['sequence']))
+    # the dna base pair: A-T, C-G, get the complement of the longest sequence
+    complement_longest_sequence = longest_sequence['sequence'].replace('A', 't').replace('T', 'a').replace('C', 'g').replace('G', 'c')
+    # upper case
+    complement_longest_sequence = complement_longest_sequence.upper()
+
+
+
+    for index, sequence_data in enumerate(parsed_sequences):
+        try:
+            # from idx calculate the type A or B
+            if index % 2 == 0:
+                chain_type = 'A'
+            else:
+                chain_type = 'B'
+            sequence_name = clean_filename(sequence_data['sequence'])
+            output_path = os.path.join(pdb_folder, f'{sequence_name}_{chain_type}.pdb')
+            if os.path.exists(output_path):
+                output_text.insert(tk.END, f"PDB file {index + 1} already exists: {output_path}\n")
+                pdb_paths.append(output_path)
+                continue
+            result = subprocess.run(
+                ['python', 'generate_pdb.py', '--dna_seq', sequence_data['sequence'], '--chain_type', chain_type, '--output_path', output_path],
                 capture_output=True,
                 text=True
             )

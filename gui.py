@@ -3,7 +3,7 @@ from tkinter import messagebox
 import subprocess
 import os
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 def parse_dna_sequence(input_text):
     """
