@@ -41,7 +41,8 @@ def generate_config(space_counts, pdb_paths, config_folder):
     config_content = header + "\n"
     
     for i, (space_count, pdb_path) in enumerate(zip(space_counts, pdb_paths)):
-        shift = calculate_shift(space_count)
+        shift_left = calculate_shift(space_count)
+        shift_down = i * 20
         config_content += f'''
 #-------------------------------------
 # B type DNA 10.5 bpt, DNA sequence {i+1}
@@ -50,7 +51,7 @@ T pdb
 C 1
 F 8
 S 1.0
-L {shift:.2f} 0 0
+L {shift_left:.2f} {shift_down:.2f} 0
 R 0 0 0
 '''
     

@@ -180,7 +180,7 @@ def init(folder_path,dna_seq, chain_name):
         elif dna_seq[0] == 'G':
             structure = structure_B_G
     
-        new_structure = generate_chain(reverse_dna_seq, structure, 'A', rotran, chain_B_res_A, chain_B_res_T, chain_B_res_C, chain_B_res_G)
+        new_structure = generate_chain(dna_seq, structure, 'A', rotran, chain_B_res_A, chain_B_res_T, chain_B_res_C, chain_B_res_G)
 
     return new_structure
 
