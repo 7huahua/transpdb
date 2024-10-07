@@ -2,8 +2,10 @@ import tkinter as tk
 from tkinter import messagebox
 import subprocess
 import os
-
-DEBUG_MODE = False
+import Bio.Align
+from generate_pdb import *
+from align_pdb import *
+DEBUG_MODE = True
 
 def parse_dna_sequence(input_text):
     """
@@ -73,7 +75,6 @@ def run_generate_pdb_and_config():
                 capture_output=True,
                 text=True
             )
-            
             if result.returncode == 0:
                 pdb_paths.append(output_path)
                 output_text.insert(tk.END, f"PDB file {index + 1} generated successfully: {output_path}\n")
@@ -81,6 +82,263 @@ def run_generate_pdb_and_config():
                 output_text.insert(tk.END, f"Failed to generate PDB file {index + 1}, please check!\n")
                 output_text.insert(tk.END, result.stderr)
                 return  # Stop processing if any PDB generation fails
+        
+        except Exception as e:
+            messagebox.showerror("Error", f"Problem running generate_pdb.py: {e}")
+            return
+
+    if len(pdb_paths) == len(parsed_sequences):
+        try:
+            command = [
+                'python', 
+                'generate_config.py'
+            ] + [str(seq['spaces']) for seq in parsed_sequences] + pdb_paths + [
+                '--config_folder', 
+                config_folder
+            ]
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            if result.returncode == 0:
+                config_path = result.stdout.strip()
+                output_text.insert(tk.END, f"\nConfig file generated successfully: {config_path}\n")
+            else:
+                output_text.insert(tk.END, "Failed to generate Config file, please check!\n")
+                output_text.insert(tk.END, result.stderr)
+        
+        except Exception as e:
+            messagebox.showerror("Error", f"Problem running generate_config.py: {e}")
+    else:
+        output_text.insert(tk.END, "Config file not generated due to incomplete PDB file generation.\n")
+
+def test_align():
+    if DEBUG_MODE:
+        pdb_folder = r"D:\Han\projects\transpdb\han\generated_pdb"
+        config_folder = r"D:\2024.02.22_VRSim-Gutmann\SimulationFolder\PDB_Files\Configuration_Files"
+        debug_input = "      gcta\natcgatcgatcgatcgatcgatcgatcgatcg\n                tagc"
+        
+        entry_pdb_folder.delete(0, tk.END)
+        entry_pdb_folder.insert(0, pdb_folder)
+        entry_config_folder.delete(0, tk.END)
+        entry_config_folder.insert(0, config_folder)
+        text_input.delete("1.0", tk.END)
+        text_input.insert("1.0", debug_input)
+
+    if not get_folder_paths():
+        return
+
+    user_input = text_input.get("1.0", tk.END)
+    if not user_input.strip():
+        messagebox.showwarning("Input Error", "Please enter DNA sequence")
+        return
+    
+    parsed_sequences = parse_dna_sequence(user_input)
+    pdb_paths = []
+
+    output_text.delete("1.0", tk.END)  # Clear output text box
+
+    # 找到最长序列并产生对应的B链的pdb文件并标记为complement seq pdb
+    # get the longest sequence
+    longest_sequence = max(parsed_sequences, key=lambda x: len(x['sequence']))
+    longest_sequence['sequence'] = longest_sequence['sequence'].upper()
+    # the dna base pair: A-T, C-G, get the complement of the longest sequence
+    complement_longest_sequence = longest_sequence['sequence'].replace('A', 't').replace('T', 'a').replace('C', 'g').replace('G', 'c')
+    # upper case
+    complement_longest_sequence = complement_longest_sequence.upper()
+    folder_path = 'init_pdb'
+    complement_seq_structure = init(folder_path, complement_longest_sequence, 'B')
+
+    # 对于每条序列：
+    #     如果是最长序列，则生成chain A 的pdb文件
+    #     否则：
+    #         获取对齐位置和短链的序列
+    #         对齐序列第一个核苷酸骨架和对应位置的最长链B链的核苷酸骨架
+    #         根据骨架的偏移获取第一个核苷酸位置
+    #         根据rotran生成chain B 的pdb文件
+    #         返回文件path
+
+    # 对于所有path，生成config文件
+    sequence_data=longest_sequence
+
+    try:
+        # if it is the longest seq, generate the pdb file 
+        if sequence_data['sequence'] == longest_sequence['sequence']:
+            chain_type = 'A'
+            sequence_name = clean_filename(sequence_data['sequence'])
+            output_path = os.path.join(pdb_folder, f'{sequence_name}_{chain_type}.pdb')
+            if os.path.exists(output_path):
+                output_text.insert(tk.END, f"PDB file {sequence_name} already exists: {output_path}\n")
+                pdb_paths.append(output_path)
+            result = subprocess.run(
+                ['python', 'generate_pdb.py', '--dna_seq', sequence_data['sequence'], '--chain_type', chain_type, '--output_path', output_path],
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                pdb_paths.append(output_path)
+                output_text.insert(tk.END, f"PDB file {sequence_name} generated successfully: {output_path}\n")
+            else:
+                output_text.insert(tk.END, f"Failed to generate PDB file {sequence_name}, please check!\n")
+                output_text.insert(tk.END, result.stderr)
+                return  # Stop processing if any PDB generation fails
+        else:
+            # get the align position and the short seq
+            chain_type = 'B'
+            sequence_name = clean_filename(complement_longest_sequence)
+            output_path = os.path.join(pdb_folder, f'{sequence_name}_{chain_type}.pdb')
+            if os.path.exists(output_path):
+                output_text.insert(tk.END, f"PDB file {sequence_name} already exists: {output_path}\n")
+                pdb_paths.append(output_path)
+            result = subprocess.run(
+                ['python', 'generate_pdb.py', '--dna_seq', complement_longest_sequence, '--chain_type', chain_type, '--output_path', output_path],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode == 0:
+                pdb_paths.append(output_path)
+                output_text.insert(tk.END, f"PDB file {sequence_name} generated successfully: {output_path}\n")
+            else:
+                output_text.insert(tk.END, f"Failed to generate PDB file {sequence_name}, please check!\n")
+                output_text.insert(tk.END, result.stderr)
+                return  # Stop processing if any PDB generation fails
+    
+    except Exception as e:
+        messagebox.showerror("Error", f"Problem running generate_pdb.py: {e}")
+        return
+
+    if len(pdb_paths) == 2:
+        try:
+            command = [
+                'python', 
+                'generate_config.py'
+            ] + [str(seq['spaces']) for seq in parsed_sequences] + pdb_paths + [
+                '--config_folder', 
+                config_folder
+            ]
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            if result.returncode == 0:
+                config_path = result.stdout.strip()
+                output_text.insert(tk.END, f"\nConfig file generated successfully: {config_path}\n")
+            else:
+                output_text.insert(tk.END, "Failed to generate Config file, please check!\n")
+                output_text.insert(tk.END, result.stderr)
+        
+        except Exception as e:
+            messagebox.showerror("Error", f"Problem running generate_config.py: {e}")
+    else:
+        output_text.insert(tk.END, "Config file not generated due to incomplete PDB file generation.\n")
+
+def run_generate_pdb_config_align():
+    if DEBUG_MODE:
+        pdb_folder = r"D:\Han\projects\transpdb\han\generated_pdb"
+        config_folder = r"D:\2024.02.22_VRSim-Gutmann\SimulationFolder\PDB_Files\Configuration_Files"
+        debug_input = "      gcta\natcgatcgatcgatcgatcgatcgatcgatcg\n                tagc"
+        
+        entry_pdb_folder.delete(0, tk.END)
+        entry_pdb_folder.insert(0, pdb_folder)
+        entry_config_folder.delete(0, tk.END)
+        entry_config_folder.insert(0, config_folder)
+        text_input.delete("1.0", tk.END)
+        text_input.insert("1.0", debug_input)
+
+    if not get_folder_paths():
+        return
+
+    user_input = text_input.get("1.0", tk.END)
+    if not user_input.strip():
+        messagebox.showwarning("Input Error", "Please enter DNA sequence")
+        return
+    
+    parsed_sequences = parse_dna_sequence(user_input)
+    pdb_paths = []
+
+    output_text.delete("1.0", tk.END)  # Clear output text box
+
+    # 找到最长序列并产生对应的B链的pdb文件并标记为complement seq pdb
+    # get the longest sequence
+    longest_sequence = max(parsed_sequences, key=lambda x: len(x['sequence']))
+    longest_sequence['sequence'] = longest_sequence['sequence'].upper()
+    # the dna base pair: A-T, C-G, get the complement of the longest sequence
+    complement_longest_sequence = longest_sequence['sequence'].replace('A', 't').replace('T', 'a').replace('C', 'g').replace('G', 'c')
+    # upper case
+    complement_longest_sequence = complement_longest_sequence.upper()
+    folder_path = 'init_pdb'
+    complement_seq_structure = init(folder_path, complement_longest_sequence, 'B')
+
+    # 对于每条序列：
+    #     如果是最长序列，则生成chain A 的pdb文件
+    #     否则：
+    #         获取对齐位置和短链的序列
+    #         对齐序列第一个核苷酸骨架和对应位置的最长链B链的核苷酸骨架
+    #         根据骨架的偏移获取第一个核苷酸位置
+    #         根据rotran生成chain B 的pdb文件
+    #         返回文件path
+
+    # 对于所有path，生成config文件
+
+    for index, sequence_data in enumerate(parsed_sequences):
+        try:
+            # if it is the longest seq, generate the pdb file 
+            if sequence_data['sequence'] == longest_sequence['sequence']:
+                chain_type = 'A'
+                sequence_name = clean_filename(sequence_data['sequence'])
+                output_path = os.path.join(pdb_folder, f'{sequence_name}_{chain_type}.pdb')
+                if os.path.exists(output_path):
+                    output_text.insert(tk.END, f"PDB file {index + 1} already exists: {output_path}\n")
+                    pdb_paths.append(output_path)
+                    continue
+                result = subprocess.run(
+                    ['python', 'generate_pdb.py', '--dna_seq', sequence_data['sequence'], '--chain_type', chain_type, '--output_path', output_path],
+                    capture_output=True,
+                    text=True
+                )
+                
+                if result.returncode == 0:
+                    pdb_paths.append(output_path)
+                    output_text.insert(tk.END, f"PDB file {index + 1} generated successfully: {output_path}\n")
+                else:
+                    output_text.insert(tk.END, f"Failed to generate PDB file {index + 1}, please check!\n")
+                    output_text.insert(tk.END, result.stderr)
+                    return  # Stop processing if any PDB generation fails
+            else:
+                # get the align position and the short seq
+                align_position = sequence_data['spaces']-1
+                chain_type = 'B'
+                sequence_name = clean_filename(sequence_data['sequence'])
+                output_path = os.path.join(pdb_folder, f'{sequence_name}_{chain_type}_space{align_position}.pdb')
+                if os.path.exists(output_path):
+                    output_text.insert(tk.END, f"PDB file {index + 1} already exists: {output_path}\n")
+                    pdb_paths.append(output_path)
+                    continue
+                # result = subprocess.run(
+                #     ['python', 'align_pdb.py', '--structure',complement_seq_structure,'--dna_seq', sequence_data['sequence'], '--chain_type', chain_type, '--output_path', output_path, '--align_position', align_position],
+                #     capture_output=True,
+                #     text=True
+                # )
+
+                # structure, dna_seq, chain_type, output_path, align_position
+                align_pdb = AlignPDB(complement_seq_structure, sequence_data['sequence'], chain_type, output_path, align_position)
+                align_pdb.align_pdb()
+
+                if result.returncode == 0:
+                    pdb_paths.append(output_path)
+                    output_text.insert(tk.END, f"PDB file {index + 1} generated successfully: {output_path}\n")
+                else:
+                    output_text.insert(tk.END, f"Failed to generate PDB file {index + 1}, please check!\n")
+                    output_text.insert(tk.END, result.stderr)
+                    return  # Stop processing if any PDB generation fails
         
         except Exception as e:
             messagebox.showerror("Error", f"Problem running generate_pdb.py: {e}")
@@ -146,7 +404,7 @@ label_input.pack()
 text_input = tk.Text(root, height=10, width=50)
 text_input.pack()
 
-parse_button = tk.Button(root, text="Generate PDB and Config", command=run_generate_pdb_and_config)
+parse_button = tk.Button(root, text="Generate PDB and Config", command=run_generate_pdb_config_align)
 parse_button.pack()
 
 label_output = tk.Label(root, text="Parsing Result:")

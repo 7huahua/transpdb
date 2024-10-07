@@ -79,6 +79,7 @@ def generate_chain(dna_seq, structure, chain_name, rotran, res_A, res_T, res_C, 
 
     # compute the pdb file
     for i,res_name in enumerate(dna_seq):
+        print(res_name)
         if i == 0:
             continue
 
@@ -106,13 +107,21 @@ def generate_chain(dna_seq, structure, chain_name, rotran, res_A, res_T, res_C, 
         # add the atoms to the new residue
         if i!= len(dna_seq)-1:
             for atom in new_res.get_list():
-                if atom.get_name() not in ['HTER','OXT','HCAP']:
-                    # new_atom = Atom(atom.get_name(), atom.get_coord(), atom.get_bfactor(), atom.get_occupancy(), atom.get_altloc(), atom.get_fullname(), atom.get_serial_number())
-                    res.add(atom)
+                print(atom)
+                try:
+                    if atom.get_name() not in ['HTER','OXT','HCAP']:
+                        # new_atom = Atom(atom.get_name(), atom.get_coord(), atom.get_bfactor(), atom.get_occupancy(), atom.get_altloc(), atom.get_fullname(), atom.get_serial_number())
+                        res.add(atom)
+                except:
+                    print(atom)
         else:
             for atom in new_res.get_list():
-                if atom.get_name() not in ['HTER','OXT']:
-                    res.add(atom)
+                print(atom)
+                try:
+                    if atom.get_name() not in ['HTER','OXT']:
+                        res.add(atom)
+                except:
+                    print(atom)
 
         # add the residue to the structure
         structure[0][chain_name].add(res)
@@ -155,7 +164,6 @@ def init(folder_path,dna_seq, chain_name):
 
         new_structure = generate_chain(dna_seq, structure, 'A', rotran, chain_A_res_A, chain_A_res_T, chain_A_res_C, chain_A_res_G)
 
-
     elif chain_name == 'B':
 
         structure_B_A = read_pdb(os.path.join(folder_path, "TA.pdb"))
@@ -180,9 +188,23 @@ def init(folder_path,dna_seq, chain_name):
         elif dna_seq[0] == 'G':
             structure = structure_B_G
     
-        new_structure = generate_chain(dna_seq, structure, 'A', rotran, chain_B_res_A, chain_B_res_T, chain_B_res_C, chain_B_res_G)
+        new_structure = generate_chain(dna_seq, structure, 'B', rotran, chain_B_res_A, chain_B_res_T, chain_B_res_C, chain_B_res_G)
+        # delete chain A
+        delete_chain(new_structure, 'A')
 
     return new_structure
+
+def delete_chain(structure, chain_id):
+    # 获取第一个模型
+    model = structure[0]
+    
+    # 检查链是否存在
+    if chain_id in model:
+        # 删除指定的链
+        del model[chain_id]
+        print(f"已删除链 {chain_id}")
+    else:
+        print(f"链 {chain_id} 不存在")
 
 def write_config(config_path, chain_A_path, chain_B_path):
     header = '''
@@ -278,9 +300,6 @@ if __name__ == "__main__":
     #     while os.path.exists(output_file_A):
     #         output_file_A = os.path.join(folder_path, f"chain_A_{i}.pdb")
     #         i += 1
-
-    # ATTATTATTATTATTATTATT
-    # TAATAATAATAATAATAATAA
 
     write_pdb(structure_A, output_path)  # Replace with the output file path
 
