@@ -128,7 +128,7 @@ def generate_chain(dna_seq, structure, chain_name, rotran, res_A, res_T, res_C, 
 
     return structure
 
-def init(folder_path,dna_seq, chain_name):
+def init(folder_path,dna_seq, chain_name, spaces_num=0):
 
     rotran = RoTran()
     # dna_seq = chain_long_sequence
@@ -191,7 +191,16 @@ def init(folder_path,dna_seq, chain_name):
         new_structure = generate_chain(dna_seq, structure, 'B', rotran, chain_B_res_A, chain_B_res_T, chain_B_res_C, chain_B_res_G)
         # delete chain A
         delete_chain(new_structure, 'A')
-
+    if spaces_num:
+        # delete the first spaces_num residues
+        chain = new_structure[0][chain_name]
+        residues_to_remove = list(chain.child_list)[:int(spaces_num)]
+        for residue in residues_to_remove:
+            chain.detach_child(residue.id)
+        
+        # 重新编号剩余的残基
+        for i, residue in enumerate(chain, start=1):
+            residue.id = (' ', i, ' ')
     return new_structure
 
 def delete_chain(structure, chain_id):
@@ -277,7 +286,7 @@ if __name__ == "__main__":
 
     # long_pdb_path = os.path.join(folder_path, "M13mp18-start48-end48.pdb")  # Replace with your PDB file path
 
-    folder_path = "D:/Han/projects/transpdb/init_pdb"
+    folder_path = "./init_pdb"
 
     # parse the DNA sequence from arguements
     parser = argparse.ArgumentParser()
@@ -285,12 +294,14 @@ if __name__ == "__main__":
     # add A or B（indicate the rotation direction)
     parser.add_argument("--chain_type", help="select from A or B")
     parser.add_argument("--output_path", help="output path")
+    parser.add_argument("--spaces_num",help="spaces on the left")
 
     dna_seq = parser.parse_args().dna_seq
     chain_type = parser.parse_args().chain_type
     output_path = parser.parse_args().output_path
+    space_num = parser.parse_args().spaces_num
 
-    structure_A = init(folder_path, dna_seq, chain_type)
+    structure_A = init(folder_path, dna_seq, chain_type, space_num)
     # structure_B = init(folder_path, reverse_dna_seq, 'B')
 
     # # generate the incremented pdb file path name
