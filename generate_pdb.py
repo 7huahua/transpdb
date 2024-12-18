@@ -162,6 +162,11 @@ def init(folder_path,dna_seq, chain_name, spaces_num=0):
         elif dna_seq[0] == 'G':
             structure = structure_A_G
 
+        # filter the HCAP atom in the first residue if len(dna_seq) > 1
+        if len(dna_seq) > 1:
+            for atom in structure[0]['A'][1].get_list():
+                if atom.get_name() == 'HCAP':
+                    structure[0]['A'][1].detach_child(atom.id)
         new_structure = generate_chain(dna_seq, structure, 'A', rotran, chain_A_res_A, chain_A_res_T, chain_A_res_C, chain_A_res_G)
 
     elif chain_name == 'B':
@@ -187,7 +192,11 @@ def init(folder_path,dna_seq, chain_name, spaces_num=0):
             structure = structure_B_C
         elif dna_seq[0] == 'G':
             structure = structure_B_G
-    
+        
+        if len(dna_seq) > 1:
+            for atom in structure[0]['B'][1].get_list():
+                if atom.get_name() == 'HCAP':
+                    structure[0]['B'][1].detach_child(atom.id)
         new_structure = generate_chain(dna_seq, structure, 'B', rotran, chain_B_res_A, chain_B_res_T, chain_B_res_C, chain_B_res_G)
         # delete chain A
         delete_chain(new_structure, 'A')

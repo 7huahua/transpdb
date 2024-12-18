@@ -11,6 +11,9 @@ logging.basicConfig(filename="error.log", level=logging.DEBUG)
 
 
 DEBUG_MODE = False
+# ---------------------------------------------------
+# D:\Han\projects\transpdb\han\generated_pdb
+# D:\2024.02.22_VRSim-Gutmann\SimulationFolder\PDB_Files\Configuration_Files
 # -----------------------------------
 #       gctagctagcta
 # atcgatcgatcgatcgatcgatcgatcgatcg
@@ -478,4 +481,5 @@ try:
     root.mainloop()
 
 except Exception as e:
-    logging.exception("Exception occurred")
+    logging.exception("An error occurred")
+    input("Press Enter to exit...")  # 暂停程序，便于查看错误
