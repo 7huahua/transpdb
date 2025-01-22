@@ -12,7 +12,12 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--dna_seq", "ATCGATCG"]
+            "args": [
+                "--dna_seq", "ACGT",
+                "--chain_type", "A",
+                "--output_path", "./output.pdb",
+                "--spaces_num", "0"
+            ]
         }
     ]
     

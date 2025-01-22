@@ -1,7 +1,31 @@
+# 已有的忽略项
 han/
 test_pdb/
 build/
 dist/
+generated_pdb/
 han.zip
 manual-2024.10.24.pptx
 han_2024.9.29.zip
+
+# Python 相关忽略项
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+
+# 环境相关
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE 相关
+.idea/
+.vscode/
+*.swp
+.DS_Store

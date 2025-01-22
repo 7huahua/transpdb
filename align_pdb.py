@@ -1,6 +1,8 @@
 import argparse
-from generate_pdb import init
+from generate_pdb import init, extract_connect_info, generate_connect_info, write_pdb_with_connect
 from Bio.PDB import PDBParser, PDBIO, Superimposer
+import os
+from utils import *
 
 def write_pdb(structure, output_file):
     """Save the structure to a PDB file"""
@@ -39,21 +41,41 @@ class AlignPDB:
 
         return rot, tran
 
-
     def align_pdb(self):
         init_folder_path = 'init_pdb'
-        structure_short=init(init_folder_path,self.dna_seq, self.chain_type)
+        structure_short=init(init_folder_path,self.dna_seq, self.chain_type,0,0)
         structure_long=self.structure
 
-        rot, tran = self.get_residue_rotran(structure_long, structure_short)
+        if self.chain_type == "B":
+            # # 沿着整条链的中心坐标，x轴旋转180度
+            # reverse_chain_x(structure_short[0]['B'])
+            # reverse_chain_x(structure_long[0]['B'])
 
-        # apply the rotran to the short structure
-        for residue in structure_short:
-            for atom in residue.get_list():
-                atom.transform(rot, tran)
+            rot, tran = self.get_residue_rotran(structure_long, structure_short)
 
-        # write the short structure to the output path
-        write_pdb(structure_short, self.output_path)
+            # apply the rotran to the short structure
+            for residue in structure_short:
+                for atom in residue.get_list():
+                    atom.transform(rot, tran)
+
+            # # reverse back
+            # reverse_chain_x(structure_short[0]['B'])
+            # reverse_chain_x(structure_long[0]['B'])
+
+            # write the short structure to the output path
+            structure_short[0]['B'].id = 'A'
+            write_pdb(structure_short, self.output_path)
+
+            connect_info = {
+                'A': extract_connect_info(os.path.join(init_folder_path, "A.pdb")),
+                'T': extract_connect_info(os.path.join(init_folder_path, "T.pdb")),
+                'C': extract_connect_info(os.path.join(init_folder_path, "C.pdb")),
+                'G': extract_connect_info(os.path.join(init_folder_path, "G.pdb")),
+            }
+            connect_lines = generate_connect_info(structure_short[0]['A'], connect_info)
+
+            # 写入输出文件
+            write_pdb_with_connect(self.output_path, connect_lines)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
